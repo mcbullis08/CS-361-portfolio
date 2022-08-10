@@ -13,11 +13,15 @@
 #              information that is located near the supplied destination to aid the user in selecting a
 #              campground.
 
+
+# necessary library's
 import time
 import geocoder
 import json
 import search
 
+
+# Paths and global variables
 read_camp_path = 'campgrounds.txt'
 write_coord_path = 'coordinates.txt'
 
@@ -26,6 +30,8 @@ write_day_path = 'days_out.txt'
 
 read_weather = 'weather_data.txt'
 read_activities = 'activities.txt'
+
+bing_key = 'AtVAJAr_86Xhp3cOeTrjVCfW6T68GUdkCFvBAx4T2nIhiwYVW9p17UhKcGUff0TS'
 
 
 def greeting():
@@ -41,6 +47,7 @@ def greeting():
 
 
 def get_user_data():
+    # Function to read in user data and return that info for storage to main
 
     print()
     print('First we will need to get the location where you would like to go camping.')
@@ -57,8 +64,8 @@ def get_user_data():
 
 
 def convert_location(location):
-    # function to convert the supplied city, st or zip with a suitable latitude and longitude
-    bing_key = 'AtVAJAr_86Xhp3cOeTrjVCfW6T68GUdkCFvBAx4T2nIhiwYVW9p17UhKcGUff0TS'
+    # function to convert the supplied city, st with a suitable latitude and longitude
+    # and zipcode for use by partner's microservice
 
     geo_location = geocoder.bing(location, key=bing_key, method='reverse')
     result = geo_location.json
@@ -67,6 +74,7 @@ def convert_location(location):
 
 
 def write_to_files(all_data):
+    # function to write necessary info to files for further processing
 
     coordinates = [all_data[0], all_data[1], all_data[3]]
     zip_code = all_data[2]
@@ -80,6 +88,8 @@ def write_to_files(all_data):
 
 
 def distill_weather():
+    # function to write selected weather data to file for printing later
+
     with open(read_weather, 'r') as r:
         raw_weather = json.loads(r.read())
 
@@ -97,6 +107,8 @@ def distill_weather():
 
 
 def print_to_screen():
+    # function to pretty print the campground list, weather, and nearby activities
+
     print('Here is your list of campgrounds:')
     with open(read_camp_path, 'r') as r:
         camp_contents = r.read()
@@ -120,7 +132,8 @@ def print_to_screen():
 
 
 def goodbye():
-    # Function to thank the user and end the program
+    # Function to thank the user, provide them with the link to make
+    # a reservation and end the program
 
     print()
     print('Here is the website where you can go and book the campground of your choice -')
@@ -130,24 +143,33 @@ def goodbye():
 
 
 def main():
-
     greeting()
 
-    get_data = get_user_data()
-    user_location, user_dist = get_data[0], get_data[1]
+    while True:
 
-    get_loc = convert_location(user_location)
-    get_loc.append(user_dist)
+        get_data = get_user_data()
+        user_location, user_dist = get_data[0], get_data[1]
 
-    write_to_files(get_loc)
+        get_loc = convert_location(user_location)
+        get_loc.append(user_dist)
 
-    search.main()
+        write_to_files(get_loc)
 
-    time.sleep(10)
+        search.main()
 
-    distill_weather()
+        time.sleep(15)
 
-    print_to_screen()
+        distill_weather()
+
+        print_to_screen()
+
+        print("Press enter to run another search or you can type 'quit' to quit.")
+        temp = input()
+
+        if temp != 'quit':
+            continue
+        else:
+            break
 
     goodbye()
 
