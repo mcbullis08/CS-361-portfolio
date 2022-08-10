@@ -15,12 +15,17 @@
 
 import time
 import geocoder
-import geopy
-import math
+import json
+import search
 
+read_camp_path = 'campgrounds.txt'
+write_coord_path = 'coordinates.txt'
 
-write_path = 'C:/Users/Jeremy/PycharmProjects/CS361/portfolio/coordinates.txt'
-read_path = 'C:/Users/Jeremy/PycharmProjects/CS361/portfolio/campgrounds.txt'
+write_zip_path = 'zipcode.txt'
+write_day_path = 'days_out.txt'
+
+read_weather = 'weather_data.txt'
+read_activities = 'activities.txt'
 
 
 def greeting():
@@ -45,52 +50,81 @@ def get_user_data():
     print('Great choice! Now how far from this location would you be willing to camp?')
     dist = input('Enter a range (max of 25 miles) from this location:')
     print(dist + ' miles')
+    print()
 
-    return location, dist
+    info = [location, dist]
+    return info
 
 
 def convert_location(location):
     # function to convert the supplied city, st or zip with a suitable latitude and longitude
     bing_key = 'AtVAJAr_86Xhp3cOeTrjVCfW6T68GUdkCFvBAx4T2nIhiwYVW9p17UhKcGUff0TS'
 
-    geo_location = geocoder.bing(location, key=bing_key)
+    geo_location = geocoder.bing(location, key=bing_key, method='reverse')
     result = geo_location.json
-    return result['lat'], result['lng']
-    # write result to file here
+    location_data = [result['lat'], result['lng'], result['postal']]
+    return location_data
 
 
-def convert_dist(dist):
-    # function to convert distance to a latitude and longitude adjustment
-    # one degree latitude = 69 mi, one minute = 1.15 mi, one second = 101 ft
-    # one degree longitude = 54.6 mi, one minute equals 0.91 mi, one second = 80 ft
+def write_to_files(all_data):
 
-    try:
-        dist = int(dist)
-    except ValueError:
-        print("range is not a numerical value")
+    coordinates = [all_data[0], all_data[1], all_data[3]]
+    zip_code = all_data[2]
 
-    lat_dist = dist/69
-    lng_dist = dist/54.6
+    with open(write_coord_path, 'w') as write:
+        for x in coordinates:
+            write.write(f"{x}\n")
+        write.close()
 
-    return lat_dist, lng_dist
+    print("Here is the zipcode for the location you wish to stay: " + zip_code)
 
 
-def boundary_box(lat_loc, lng_loc, lat_dist, lng_dist):
-    # create a boundary box of latitude and longitude as our search area
-    lat_max = lat_loc + lat_dist
-    lat_min = lat_loc - lat_dist
+def distill_weather():
+    with open(read_weather, 'r') as r:
+        raw_weather = json.loads(r.read())
 
-    lng_max = lng_loc + lng_dist
-    lng_min = lng_loc - lng_dist
+    weather_list = [['Date       ', 'High', 'Low  ', 'Conditions   ']]
 
-    bound_box = [lat_max, lat_min, lng_max, lng_min]
+    for i in raw_weather['forecast']['forecastday']:
+        weather_list.append([i['date'], i['day']['maxtemp_f'], i['day']['mintemp_f'], i['day']['condition']['text']])
 
-    return bound_box
+    with open(read_weather, 'w') as write:
+        for sub in weather_list:
+            for x in sub:
+                write.write(str(x) + ' ')
+            write.write('\n')
+        write.close()
+
+
+def print_to_screen():
+    print('Here is your list of campgrounds:')
+    with open(read_camp_path, 'r') as r:
+        camp_contents = r.read()
+        print(camp_contents)
+
+    input("Press enter to continue...")
+    print()
+
+    print('Here is the weather report for your length of stay:')
+    with open(read_weather, 'r') as r:
+        weather_contents = r.read()
+        print(weather_contents)
+
+    input("Press enter to continue...")
+    print()
+
+    print('Here are some activities of interest in your area')
+    with open(read_activities, 'r') as r:
+        activities_contents = r.read()
+        print(activities_contents)
 
 
 def goodbye():
     # Function to thank the user and end the program
 
+    print()
+    print('Here is the website where you can go and book the campground of your choice -')
+    print('https://www.recreation.gov/')
     print()
     print('Thank you for using Campground Finder 1.0! Get out there and have fun!')
 
@@ -103,34 +137,23 @@ def main():
     user_location, user_dist = get_data[0], get_data[1]
 
     get_loc = convert_location(user_location)
+    get_loc.append(user_dist)
 
-    temp2 = convert_dist(user_dist)
-    new_dist = temp2[0], temp2[1]
+    write_to_files(get_loc)
 
-    # final = boundary_box(get_loc[0], get_loc[1], new_dist[0], new_dist[1])
-    final = []
-    for x in get_loc:
-        final.append(x)
-    final.append(user_dist)
-    print(final)
-    # write boundary box to file for further processing
+    search.main()
 
-    with open(write_path, 'w') as write:
-        for x in final:
-            write.write(f"{x}\n")
-        write.close()
+    time.sleep(10)
 
-    time.sleep(3)
+    distill_weather()
 
-    with open(read_path, 'r') as r:
-        lines = r.readlines()
-        for line in lines:
-            print(line)
-        r.close
+    print_to_screen()
 
     goodbye()
 
 
 if __name__ == "__main__":
     main()
+
+
 

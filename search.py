@@ -13,23 +13,22 @@
 #              information that is located near the supplied destination to aid the user in selecting a
 #              campground.
 
-import time
 import requests
 
 
-read_path = 'C:/Users/Jeremy/PycharmProjects/CS361/portfolio/coordinates.txt'
-write_path = 'C:/Users/Jeremy/PycharmProjects/CS361/portfolio/campgrounds.txt'
+read_path = 'coordinates.txt'
+write_path = 'campgrounds.txt'
+rec_area_path = 'rec_area.txt'
+activities_path = 'activities.txt'
 
 rec_gov_api = '30341f7c-0b1b-4460-ade0-40346cb25308'
 
-url = 'https://ridb.recreation.gov/api/v1/facilities'
+facility_url = 'https://ridb.recreation.gov/api/v1/facilities'
+activities_url = 'https://ridb.recreation.gov/api/v1/recareas/'
 
-data = []
 
-
-while True:
-
-    time.sleep(3)
+def get_campgrounds():
+    data = []
 
     with open(read_path, 'r') as r:
         lines = r.readlines()
@@ -40,23 +39,77 @@ while True:
 
     headers = {
         'accept': 'application / json',
-        'apikey': '30341f7c-0b1b-4460-ade0-40346cb25308'
+        'apikey': rec_gov_api
+        }
+
+    params = {'latitude': data[0], 'longitude': data[1], 'radius': data[2]}
+
+    r = requests.get(facility_url, headers=headers, params=params)
+
+    results = r.json()
+
+    return results
+
+
+def get_activities():
+    activities = []
+
+    headers = {
+        'accept': 'application / json',
+        'apikey': rec_gov_api
     }
 
-    params = {'latitude': data[0], 'longitude': data[1], 'radius': data[2], 'FacilityTypeDescription': 'Campground'}
+    with open(rec_area_path, 'r') as r:
+        line = r.readline()
+        while line:
+            url = activities_url + line.strip() + '/activities'
+            results = requests.get(url, headers=headers).json()
+            for i in results['RECDATA']:
+                activities.append(i['ActivityName'])
+            line = r.readline()
+        r.close()
 
-    r = requests.get(url, headers=headers, params=params)
-
-    results = [x for x in r.json()['RECDATA'] if x['FacilityTypeDescription'] == 'Campground']
-
-    campgrounds = []
-
-    for idx, campsite in enumerate(results):
-        name = results[idx]['FacilityName']
-        campgrounds.append(name)
-
-    with open(write_path, 'w') as write:
-        for x in campgrounds:
+    with open(activities_path, 'w') as write:
+        for x in list(set(activities)):
             write.write(f"{x}\n")
         write.close()
+
+
+def write_to_file(result_data):
+
+    campgrounds = []
+    campground_list = []
+    rec_area = []
+
+    for i in result_data['RECDATA']:
+        if i['FacilityTypeDescription'] == 'Campground':
+            campgrounds.append(i)
+            rec_area.append(i['ParentRecAreaID'])
+
+    for idx, campsite in enumerate(campgrounds):
+        name = campgrounds[idx]['FacilityName']
+        campground_list.append(name)
+
+    with open(write_path, 'w') as write:
+        for x in campground_list:
+            write.write(f"{x}\n")
+        write.close()
+
+    with open(rec_area_path, 'w') as write:
+        for x in list(set(rec_area)):
+            write.write(f"{x}\n")
+        write.close()
+
+
+def main():
+
+    campgrounds = get_campgrounds()
+
+    write_to_file(campgrounds)
+
+    get_activities()
+
+
+if __name__ == "__main__":
+    main()
 
