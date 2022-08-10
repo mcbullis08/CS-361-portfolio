@@ -85,6 +85,7 @@ def write_to_files(all_data):
         write.close()
 
     print("Here is the zipcode for the location you wish to stay: " + zip_code)
+    print("which can be used to search for the weather during your stay.")
 
 
 def distill_weather():
